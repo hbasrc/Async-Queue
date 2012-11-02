@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Scalar::Util qw(looks_like_number);
 
 sub new {
     my ($class, %options) = @_;
@@ -31,7 +32,7 @@ sub _define_hook_accessors {
         if(@_ > 1) {
             croak "$name must not be undef." if !defined($v) && !$options{allow_undef};
             croak "$name must be a coderef" if defined($v) && ref($v) ne 'CODE';
-            croak "You canot set $name while there is a running task." if $self->running > 0;
+            croak "You cannot set $name while there is a running task." if $self->running > 0;
             $self->{$name} = $v;
         }
         return $self->{$name};
@@ -48,6 +49,7 @@ sub concurrency {
     if(@_ > 1) {
         croak "You cannot set concurrency while there is a running task" if $self->running > 0;
         $conc = 1 if not defined($conc);
+        croak "concurrency must be a number" if !looks_like_number($conc);
         $self->{concurrency} = int($conc);
     }
     return $self->{concurrency};
@@ -63,6 +65,9 @@ _define_hook_accessors $_, allow_undef => 1 foreach qw(drain empty saturated);
 
 sub push {
     my ($self, $task, $cb) = @_;
+    if(@_ < 2) {
+        croak("You must specify something to push.");
+    }
     if(defined($cb) && ref($cb) ne 'CODE') {
         croak("callback for a task must be a coderef");
     }
