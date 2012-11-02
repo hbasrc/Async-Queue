@@ -45,8 +45,9 @@ sub running {
 
 sub concurrency {
     my ($self, $conc) = @_;
-    if(defined($conc)) {
+    if(@_ > 1) {
         croak "You cannot set concurrency while there is a running task" if $self->running > 0;
+        $conc = 1 if not defined($conc);
         $self->{concurrency} = int($conc);
     }
     return $self->{concurrency};

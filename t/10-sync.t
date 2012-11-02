@@ -83,5 +83,17 @@ sub checkQueue {
     is_deeply(\@results, [qw(saturated empty task TASK finish drain)], "results OK. all events are fired.");
 }
 
+{
+    note('--- default concurrency');
+    my $q = new_ok('Async::Queue', [worker => sub {}]);
+    is($q->concurrency, 1, "concurrency is 1 by default.");
+    $q = new_ok('Async::Queue', [ worker => sub {}, concurrency => undef ]);
+    is($q->concurrency, 1, "concurrency is 1 by default.");
+    $q->concurrency(3);
+    is($q->concurrency, 3, "concurrency changed to 3.");
+    is($q->concurrency(undef), 1, "concurrency changed to the default, which is 1.");
+    is($q->concurrency, 1, "concurrency is 1.");
+}
+
 
 done_testing();
