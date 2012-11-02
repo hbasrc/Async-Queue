@@ -302,10 +302,43 @@ sub showResults {
         showResults(@results);
 }
 
+{
+    note('--- infinite concurrency');
+    foreach my $conc_val (0, -10) {
+        my @results = ();
+        my $q; $q = new_ok('Test::AQWrapper', [
+            concurrency => $conc_val, worker => sub {
+                my ($task, $cb) = @_;
+                $q->check;
+                push(@results, $task);
+                $cb->();
+            },
+            map { my $e = $_; $e => sub {
+                $q->check;
+                push(@results, $e);
+            } } qw(saturated empty drain)
+        ]);
+        is($q->concurrency, $conc_val, "concurrency is $conc_val, meaning infinite concurrency.");
+        
+        my @tasks = (1 .. 15);
+        my @orig_tasks = @tasks;
+        my $finish_cb; $finish_cb = sub {
+            my $t = shift(@tasks);
+            $q->push($t, $finish_cb) if defined $t;
+            $q->finish;
+        };
+        $q->push(shift(@tasks), $finish_cb);
+        $q->check(0, 0, int(@orig_tasks), int(@orig_tasks));
+        is_deeply(\@results, [(map { ("empty", $_) } @orig_tasks), "drain"],
+              'results OK. Never saturated.') or
+                  showResults(@results);
+    }
+}
+
 done_testing();
 
 ## TODO: async tests
-## TODO: what if worker/finish cb throw exceptions?
-## TODO: infinite concurrency (undef or 0)
+## TODO: what if worker/finish cb throw exceptions? -> don't!!
 ## TODO: errors:
-##       invalid concurrency (negative, string..)
+##       invalid concurrency (string..)
+##       not calling $cb in worker.

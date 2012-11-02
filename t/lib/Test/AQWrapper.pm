@@ -35,8 +35,10 @@ sub check {
     is($self->length, $exp_length, "length is $exp_length") if defined $exp_length;
     is($self->running, $exp_running, "running is $exp_running") if defined $exp_running;
     is($self->{__finish_num}, $exp_finish, "finish num is $exp_finish") if defined $exp_finish;
-    cmp_ok($self->running, "<=", $self->concurrency, "running <= concurrency") or
-        diag("running: " . $self->running . ", concurrency: " . $self->concurrency);
+    if($self->concurrency > 0) {
+        cmp_ok($self->running, "<=", $self->concurrency, "running <= concurrency") or
+            diag("running: " . $self->running . ", concurrency: " . $self->concurrency);
+    }
     $exp_length = $self->length if not defined $exp_length;
     $exp_running = $self->running if not defined $exp_running;
     $exp_finish = $self->{__finish_num} if not defined $exp_finish;
