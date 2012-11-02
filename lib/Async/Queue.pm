@@ -31,7 +31,7 @@ sub _define_hook_accessors {
         if(@_ > 1) {
             croak "$name must not be undef." if !defined($v) && !$options{allow_undef};
             croak "$name must be a coderef" if defined($v) && ref($v) ne 'CODE';
-            croak "You canot set $name while there is a running task" if $self->running > 0;
+            croak "You canot set $name while there is a running task." if $self->running > 0;
             $self->{$name} = $v;
         }
         return $self->{$name};
@@ -60,39 +60,38 @@ sub length {
 _define_hook_accessors 'worker';
 _define_hook_accessors $_, allow_undef => 1 foreach qw(drain empty saturated);
 
-
-## sub worker {
-##     my ($self, $worker) = @_;
-##     if(@_ > 1) {
-##         croak "worker must be a coderef" if ref($worker) ne 'CODE';
-##         croak "You cannot set worker while there is a running task." if $self->running > 0;
-##         $self->{worker} = $worker;
-##     }
-##     return $self->{worker};
-## }
-
 sub push {
     my ($self, $task, $cb) = @_;
     if(defined($cb) && ref($cb) ne 'CODE') {
         croak("callback for a task must be a coderef");
     }
     push(@{$self->{task_queue}}, [$task, $cb]);
-    $self->_shift_run();
+    $self->_shift_run(1);
     return $self;
 }
 
 sub _shift_run {
-    my ($self) = @_;
+    my ($self, $from_push) = @_;
     return if $self->concurrency > 0 && $self->running >= $self->concurrency;
     my $args_ref = shift(@{$self->{task_queue}});
     return if !defined($args_ref);
     my ($task, $cb) = @$args_ref;
     $self->{running} += 1;
+    if($self->running == $self->concurrency && $from_push && defined($self->saturated)) {
+        $self->saturated->();
+    }
+    if(@{$self->{task_queue}} == 0 && defined($self->empty)) {
+        $self->empty->();
+    }
     $self->worker->($task, sub {
         my (@worker_results) = @_;
-        $self->{running} -= 1;
         $cb->(@worker_results) if defined($cb);
-        $self->_shift_run();
+        $self->{running} -= 1;
+        if(@{$self->{task_queue}} == 0 && $self->running == 0 && defined($self->drain)) {
+            $self->drain->();
+        }
+        @_ = ($self);
+        goto &_shift_run;
     });
 }
 

@@ -1,10 +1,18 @@
-
 use strict;
 use warnings;
 use Test::More;
+use Test::Builder;
 
 BEGIN {
     use_ok("Async::Queue");
+}
+
+sub checkQueue {
+    my ($q, $exp_length, $exp_running, $exp_concurrency) = @_;
+    local $Test::Builder::Level += 1;
+    is($q->length, $exp_length, "length is $exp_length") if defined $exp_length;
+    is($q->running, $exp_running, "running is $exp_running") if defined $exp_running;
+    is($q->concurrency, $exp_concurrency, "concurrency is $exp_concurrency") if defined $exp_concurrency;
 }
 
 {
@@ -14,30 +22,44 @@ BEGIN {
         push(@results, $task);
         $cb->(lc($task), uc($task));
     }]);
-    is($q->length, 0, "length is 0 at first");
-    is($q->running, 0, "running is 0 at first");
-    $q->push("a");
-    is($q->length, 0,  "synchronous task is immediately processed...");
-    is($q->running, 0, "... thus length and running are always 0");
+    checkQueue $q, 0, 0, 1;
+    is($q->push("a"), $q, 'push() method returns the object.');
+    checkQueue $q, 0, 0, 1;
     is_deeply(\@results, ["a"], "results ok");
     @results = ();
     foreach my $letter (qw(b c d)) {
         $q->push($letter);
-        is($q->length, 0, "length 0");
-        is($q->running, 0, "running 0");
+        checkQueue $q, 0, 0, 1;
     }
     is_deeply(\@results, [qw(b c d)], "results OK");
-    
+
+    note('--- callback to push()');
     @results = ();
-    $q->push("E", sub {
+    is($q->push("E", sub {
         my @args = @_;
         push(@results, @args);
-    });
+        checkQueue $q, 0, 1, 1;
+    }), $q, 'push() method returns the object.');
     is_deeply(\@results, [qw(E e E)], "results OK. push() callback is called with arguments");
 }
 
-## TODO: other callbacks
-## TODO: async tests
-## TODO: errors
+{
+    note('--- accessors');
+    my $worker = sub { };
+    my $q = new_ok('Async::Queue', [concurrency => 12, worker => $worker]);
+    checkQueue $q, 0, 0, 12;
+    is($q->concurrency(5), 5, "set concurrency to 5");
+    checkQueue $q, 0, 0, 5;
+    is($q->worker, $worker, "worker() returns coderef");
+    ok(!defined($q->$_), "$_() returns undef now.") foreach qw(saturated empty drain);
+    my $another_worker = sub { print "hoge" };
+    my %handlers = map { $_ => sub { print $_ } } qw(saturated empty drain);
+    is($q->worker($another_worker), $another_worker, "set another_worker");
+    is($q->$_($handlers{$_}), $handlers{$_}, "set $_ hander") foreach keys %handlers;
+    is($q->worker, $another_worker, "get another_worker");
+    is($q->$_(), $handlers{$_}, "get $_ handler") foreach keys %handlers;
+    ok(!defined($q->$_(undef)), "set $_ handler to undef") foreach keys %handlers;
+}
+
 
 done_testing();
