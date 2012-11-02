@@ -61,5 +61,27 @@ sub checkQueue {
     ok(!defined($q->$_(undef)), "set $_ handler to undef") foreach keys %handlers;
 }
 
+{
+    note('--- event callbacks receive the object as the first argument');
+    my @results = ();
+    my $q; $q = new_ok('Async::Queue', [
+        concurrency => 1, worker => sub {
+            my ($task, $cb) = @_;
+            push(@results, $task);
+            $cb->(uc($task));
+        },
+        map { my $event = $_; $event => sub {
+            my ($aq) = @_;
+            is($aq, $q, "\"$event\" event handler receives the object.");
+            push(@results, $event);
+        } } qw(saturated empty drain)
+    ]);
+    $q->push("task", sub {
+        my ($ret) = @_;
+        push(@results, $ret, "finish");
+    });
+    is_deeply(\@results, [qw(saturated empty task TASK finish drain)], "results OK. all events are fired.");
+}
+
 
 done_testing();

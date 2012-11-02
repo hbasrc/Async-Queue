@@ -304,7 +304,6 @@ sub showResults {
 
 done_testing();
 
-## TODO: event callbacks receive the queue object as its argument
 ## TODO: async tests
 ## TODO: what if worker/finish cb throw exceptions?
 ## TODO: infinite concurrency (undef or 0)

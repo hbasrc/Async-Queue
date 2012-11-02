@@ -78,17 +78,17 @@ sub _shift_run {
     my ($task, $cb) = @$args_ref;
     $self->{running} += 1;
     if($self->running == $self->concurrency && $from_push && defined($self->saturated)) {
-        $self->saturated->();
+        $self->saturated->($self);
     }
     if(@{$self->{task_queue}} == 0 && defined($self->empty)) {
-        $self->empty->();
+        $self->empty->($self);
     }
     $self->worker->($task, sub {
         my (@worker_results) = @_;
         $cb->(@worker_results) if defined($cb);
         $self->{running} -= 1;
         if(@{$self->{task_queue}} == 0 && $self->running == 0 && defined($self->drain)) {
-            $self->drain->();
+            $self->drain->($self);
         }
         @_ = ($self);
         goto &_shift_run;
