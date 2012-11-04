@@ -13,7 +13,14 @@ WriteMakefile(
       : ()),
     PL_FILES            => {},
     PREREQ_PM => {
+        'Carp' => 0,
+        'Scalar::Util' => 0,
+    },
+    BUILD_REQUIRES => {
         'Test::More' => 0,
+        'FindBin' => 0,
+        'Test::Builder' => 0,
+        'Test::Exception' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Async-Queue-*' },
