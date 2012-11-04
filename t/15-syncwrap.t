@@ -337,8 +337,3 @@ sub showResults {
 
 done_testing();
 
-## TODO: async tests
-## TODO: what if worker/finish cb throw exceptions? -> don't!!
-## TODO: errors:
-##       invalid concurrency (string..)
-##       not calling $cb in worker.
