@@ -104,7 +104,7 @@ sub _shift_run {
 
 =head1 NAME
 
-Async::Queue - The great new Async::Queue!
+Async::Queue - control concurrency of asynchronous tasks
 
 =head1 VERSION
 
@@ -117,33 +117,161 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
 
     use Async::Queue;
+    
+    ## create a queue object with concurrency 2
+    my $q = Async::Queue->new(
+        concurrency => 2, worker => sub {
+            my ($task, $callback) = @_;
+            print "hello $task->{name}\n";
+            $callback->();
+        }
+    );
+    
+    ## assign a callback
+    $q->drain(sub {
+        print "all items have been processed\n";
+    });
+    
+    ## add some items to the queue
+    $q->push({name => 'foo'}, sub {
+        print "finished processing foo\n";
+    });
+    $q->push({name => 'bar'}, sub {
+        print "finished processing bar\n";
+    });
 
-    my $foo = Async::Queue->new();
-    ...
 
-=head1 EXPORT
+=head1 DESCRIPTION
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+L<Async::Queue> is used to process tasks with the specified concurrency.
+The tasks given to L<Async::Queue> are processed in parallel with its worker routine up to the concurrency level.
+If more tasks arrive at the L<Async::Queue> object, those tasks will wait for currently running tasks to finish.
+When a task is finished, one of the waiting tasks starts to be processed in first-in-first-out (FIFO) order.
 
-=head1 SUBROUTINES/METHODS
+In short, L<Async::Queue> is a Perl port of the C<queue> object of async.js (L<https://github.com/caolan/async#queue>).
+
+The basic usage of L<Async::Queue> is as follows:
+
+=over
+
+=item 1.
+
+Create L<Async::Queue> object with C<worker> attribute and optional C<concurrency> attribute.
+C<worker> is a subroutine reference that processes tasks. C<concurrency> is the concurrency level.
+
+=item 2.
+
+Push tasks to the L<Async::Queue> object via C<push()> method with optional callback functions.
+
+The tasks will be processed in FIFO order by the C<worker> subroutine.
+When a task is finished, the callback function, if any, is called with the results.
+
+
+=back
+
+
+=head1 CLASS METHODS
+
+=head2 $queue = Async::Queue->new(%attributes);
+
+Creates an L<Async::Queue> object.
+
+It takes named arguments to initialize attributes of the L<Async::Queue> object.
+See L</ATTRIBUTES> for the list of the attributes.
+
+C<worker> attribute is mandatory.
+
+
+=head1 ATTRIBUTES
+
+An L<Async::Queue> object has a set of attributes.
+
+You can initialize the attributes in C<new()> method.
+You can get and set the attributes of an L<Async::Queue> object via their accessor methods (See L</"OBJECT METHODS">).
+
+=head2 worker (CODE($task, $callback), mandatory)
+
+C<worker> attribute is a subroutine reference that processes a task. It must not be C<undef>.
+
+C<worker> subroutine reference takes two arguments, C<$task> and C<$callback>.
+
+C<$task> is the task object the C<worker> is supposed to process.
+
+C<$callback> is a callback subroutine reference that C<worker> must call when the task is finished.
+C<$callback> can take any list of arguments, which will be passed to the C<$finish_callback> given to the C<push()> method
+(See L</"OBJECT METHODS">).
+
+So the C<worker> attribute is something like:
+
+    my $q = Async::Queue->new(worker => sub {
+        my ($task, $callback) = @_;
+        my @results = some_processing($task);
+        $callback->(@results);
+    });
+
+You can do asynchonous processing by deferring the call to C<$callback>:
+
+    my $q = Async::Queue->new(worker => sub {
+        my ($task, $callback) = @_;
+        some_async_processing($task, on_finish => sub {
+            my @results = @_;
+            $callback->(@results);
+        });
+    });
+
+
+=head2 concurrency (INT, optional, default = 1)
+
+=head2 saturated (CODE($queue), optional, default = undef)
+
+=head2 empty (CODE($queue), optional, default = undef)
+
+=head2 drain (CODE($queue), optional, default = undef)
+
+
+=head1 OBJECT METHODS
+
+=head2 $queue->push($task, [$finish_callback->(@results)] );
+
+=head2 $running_num = $queue->running();
+
+=head2 $waiting_num = $queue->length();
+
+=head2 $worker = $queue->worker([$new_worker]);
+
+=head2 $concurrency = $queue->concurrency([$new_concurrency]);
+
+=head2 $saturated = $queue->saturated([$new_saturated]);
+
+=head2 $empty = $queue->empty([$new_empty]);
+
+=head2 $drain = $queue->drain([$new_drain]);
+
+
+=head1 SEE ALSO
+
+=over
+
+=item L<AnyEvent::FIFO>
+
+=back
 
 
 =head1 AUTHOR
 
 Toshio Ito, C<< <debug.ito at gmail.com> >>
 
+=head1 REPOSITORY
+
+L<https://github.com/debug-ito/Async-Queue>
+
 =head1 BUGS
 
 Please report any bugs or feature requests to C<bug-async-queue at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Async-Queue>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
 
 
 
@@ -175,9 +303,6 @@ L<http://cpanratings.perl.org/d/Async-Queue>
 L<http://search.cpan.org/dist/Async-Queue/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
 
 
 =head1 LICENSE AND COPYRIGHT
