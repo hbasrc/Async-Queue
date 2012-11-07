@@ -186,10 +186,14 @@ C<worker> attribute is mandatory.
 
 =head1 ATTRIBUTES
 
-An L<Async::Queue> object has a set of attributes.
+An L<Async::Queue> object has the following attributes.
 
 You can initialize the attributes in C<new()> method.
 You can get and set the attributes of an L<Async::Queue> object via their accessor methods (See L</"OBJECT METHODS">).
+
+Note that you cannot set any attribute listed here while there is a task running in the L<Async::Queue> object.
+This is because changing the attributes during task execution is very confusing and leads to unpredictable behavior.
+So if you want to set an attribute, make sure there is no task running (C<running()> method can be useful).
 
 =head2 worker (CODE($task, $callback), mandatory)
 
@@ -224,30 +228,84 @@ You can do asynchonous processing by deferring the call to C<$callback>:
 
 =head2 concurrency (INT, optional, default = 1)
 
+C<concurrency> attribute is the maximum number of tasks that can be processed at the same time.
+It must be an integer number.
+
+If C<concurrency> is set to 0 or any negative number, the concurrency level becomes infinite,
+i.e. pushed tasks are immediately processed no matter how many are already running.
+
+If C<concurrency> is set to C<undef> (or omitted in C<new()> method), it will be 1.
+
+
 =head2 saturated (CODE($queue), optional, default = undef)
+
+C<saturated> attribute is a subroutine reference that is called when the number of running tasks hits C<concurrency>.
+This means further tasks will wait in the queue.
+
+C<saturated> subroutine reference takes one argument (C<$queue>), which is the L<Async::Queue> object holding it.
+
 
 =head2 empty (CODE($queue), optional, default = undef)
 
+C<empty> attribute is a subroutine reference that is called when the last task from the queue is given to the worker.
+This means there is no task waiting in the L<Async::Queue> object.
+
+If the L<Async::Queue> object is not saturated, C<empty> subroutine is called every time a task is pushed.
+This is because every pushed task goes into the queue first even if the L<Async::Queue> object can process the task immediately.
+
+C<empty> subroutine reference takes one argument (C<$queue>), which is the L<Async::Queue> object holding it.
+
 =head2 drain (CODE($queue), optional, default = undef)
 
+C<drain> attribute is a subroutine reference that is called when the last task in the L<Async::Queue> object has finished.
+This means there is no task running or waiting in the L<Async::Queue> object.
+
+C<drain> subroutine reference takes one argument (C<$queue>), which is the C<Async::Queue> object holding it.
 
 =head1 OBJECT METHODS
 
 =head2 $queue->push($task, [$finish_callback->(@results)] );
 
+Pushes a task into the L<Async::Queue> object.
+The argument C<$task> is mandatory, while C<$finish_callback> is optional.
+
+C<$task> is a task that the worker will process. It will be given as the C<$task> argument to the C<worker> subroutine.
+
+C<$finish_callback> is a subroutine reference that will be called when the worker finishes processing the task.
+The arguments for C<$finish_callback> (C<@results>) are the arguments for the C<$callback> subroutine reference in the C<worker> subroutine.
+
+
 =head2 $running_num = $queue->running();
+
+Returns the number of currently running tasks in the L<Async::Queue> object.
 
 =head2 $waiting_num = $queue->length();
 
+Returns the number of waiting tasks in the L<Async::Queue> object.
+
 =head2 $worker = $queue->worker([$new_worker]);
+
+Accessor for the C<worker> attribute.
 
 =head2 $concurrency = $queue->concurrency([$new_concurrency]);
 
+Accessor for the C<concurrency> attribute.
+
 =head2 $saturated = $queue->saturated([$new_saturated]);
+
+Accessor for the C<saturated> attribute.
 
 =head2 $empty = $queue->empty([$new_empty]);
 
+Accessor for the C<empty> attribute.
+
 =head2 $drain = $queue->drain([$new_drain]);
+
+Accessor for the C<drain> attribute.
+
+=head1 EXAMPLE
+
+
 
 
 =head1 SEE ALSO
