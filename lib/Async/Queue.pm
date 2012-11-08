@@ -274,6 +274,7 @@ C<$task> is a task that the worker will process. It will be given as the C<$task
 C<$finish_callback> is a subroutine reference that will be called when the worker finishes processing the task.
 The arguments for C<$finish_callback> (C<@results>) are the arguments for the C<$callback> subroutine reference in the C<worker> subroutine.
 
+C<push()> method returns the L<Async::Queue> object.
 
 =head2 $running_num = $queue->running();
 
@@ -305,6 +306,58 @@ Accessor for the C<drain> attribute.
 
 =head1 EXAMPLE
 
+=head2 Concurrent HTTP downloader
+
+    use strict;
+    use warnings;
+    use AnyEvent;
+    use AnyEvent::HTTP;
+    use Async::Queue;
+    
+    my $q = Async::Queue->new(concurrency => 3, worker => sub {
+        my ($url, $callback) = @_;
+        print STDERR "Start $url\n";
+        http_get $url, sub {
+            my ($data, $headers) = @_;
+            print STDERR "End $url\n";
+            $callback->($data);
+        };
+    });
+    
+    my @urls = (
+        'http://www.debian.org/',
+        'http://www.ubuntu.com/',
+        'http://fedoraproject.org/',
+        'http://www.opensuse.org/',
+        'http://www.centos.org/',
+        'http://www.slackware.com/',
+        'http://www.gentoo.org/',
+        'http://www.archlinux.org/',
+        'http://trisquel.info/',
+    );
+    
+    my %results = ();
+    my $cv = AnyEvent->condvar;
+    foreach my $url (@urls) {
+        $cv->begin();
+        $q->push($url, sub {
+            my ($data) = @_;
+            $results{$url} = $data;
+            $cv->end();
+        });
+    }
+    $cv->recv;
+    
+    foreach my $key (keys %results) {
+        print STDERR "$key: " . length($results{$key}) . "bytes\n";
+    }
+
+This example uses L<AnyEvent::HTTP> to send HTTP GET requests for multiple URLs simultaneously.
+While simultaneous requests dramatically improve efficiency, it may overload the client host
+and/or the network.
+
+This is where L<Async::Queue> comes in handy. With L<Async::Queue> you can control the concurrency level
+of the HTTP sessions (in this case, three).
 
 
 
@@ -313,6 +366,13 @@ Accessor for the C<drain> attribute.
 =over
 
 =item L<AnyEvent::FIFO>
+
+The goal of L<AnyEvent::FIFO> is the same as that of L<Async::Queue>: to control concurrency level of asynchronous tasks.
+The big difference is that L<AnyEvent::FIFO> is a queue of subroutines while L<Async::Queue> is a queue of tasks (data).
+In L<Async::Queue>, worker subroutine is registered with the object in advance.
+In L<AnyEvent::FIFO>, it is workers that are pushed to the queue.
+
+You can emulate L<AnyEvent::FIFO> with L<Async::Queue> by pushing subroutine references to it as tasks.
 
 =back
 
