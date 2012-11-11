@@ -33,6 +33,7 @@ sub check {
     my ($self, $exp_length, $exp_running, $exp_finish, $exp_pushed) = @_;
     local $Test::Builder::Level += 1;
     is($self->length, $exp_length, "length is $exp_length") if defined $exp_length;
+    is($self->waiting, $self->length, "waiting is the same as length");
     is($self->running, $exp_running, "running is $exp_running") if defined $exp_running;
     is($self->{__finish_num}, $exp_finish, "finish num is $exp_finish") if defined $exp_finish;
     if($self->concurrency > 0) {

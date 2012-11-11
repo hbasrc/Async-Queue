@@ -11,6 +11,7 @@ sub checkQueue {
     my ($q, $exp_length, $exp_running, $exp_concurrency) = @_;
     local $Test::Builder::Level += 1;
     is($q->length, $exp_length, "length is $exp_length") if defined $exp_length;
+    is($q->waiting, $q->length, "waiting is the same as length");
     is($q->running, $exp_running, "running is $exp_running") if defined $exp_running;
     is($q->concurrency, $exp_concurrency, "concurrency is $exp_concurrency") if defined $exp_concurrency;
 }

@@ -60,6 +60,8 @@ sub length {
     return int(@{$self->{task_queue}});
 }
 
+*waiting = \&length;
+
 _define_hook_accessors 'worker';
 _define_hook_accessors $_, allow_undef => 1 foreach qw(drain empty saturated);
 
@@ -282,9 +284,13 @@ C<push()> method returns the L<Async::Queue> object.
 
 Returns the number of currently running tasks in the L<Async::Queue> object.
 
-=head2 $waiting_num = $queue->length();
+=head2 $waiting_num = $queue->waiting();
 
 Returns the number of waiting tasks in the L<Async::Queue> object.
+
+=head2 $waiting_num = $queue->length();
+
+Alias for C<waiting()> method. It returns the number of waiting tasks in the L<Async::Queue> object.
 
 =head2 $worker = $queue->worker([$new_worker]);
 
