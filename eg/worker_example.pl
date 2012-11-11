@@ -19,7 +19,7 @@ sub some_async_processing {
 
 {
     my $q = Async::Queue->new(worker => sub {
-        my ($task, $callback) = @_;
+        my ($task, $callback, $queue) = @_;
         my @results = some_processing($task);
         $callback->(@results);
     });
@@ -32,7 +32,7 @@ sub some_async_processing {
 {
     my $cv = AE::cv;
     my $q = Async::Queue->new(worker => sub {
-        my ($task, $callback) = @_;
+        my ($task, $callback, $queue) = @_;
         some_async_processing($task, on_finish => sub {
             my @results = @_;
             $callback->(@results);

@@ -16,6 +16,20 @@ sub checkQueue {
 }
 
 {
+    note('--- worker arguments');
+    my $got_task = '';
+    my $q; $q = new_ok('Async::Queue', [ concurrency => 1, worker => sub {
+        my ($task, $cb, $queue) = @_;
+        $got_task = $task;
+        is(ref($cb), "CODE", 'cb is a coderef');
+        is($queue, $q, 'queue is the object q');
+    } ]);
+    $q->push('a');
+    is($got_task, 'a', 'worker executed');
+}
+
+{
+    note('--- basic push() behavior');
     my @results = ();
     my $q = new_ok('Async::Queue', [ concurrency => 1, worker => sub {
         my ($task, $cb) = @_;

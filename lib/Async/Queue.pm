@@ -98,7 +98,7 @@ sub _shift_run {
         }
         @_ = ($self);
         goto &_shift_run;
-    });
+    }, $self);
 }
 
 
@@ -195,11 +195,11 @@ Note that you cannot set any attribute listed here while there is a task running
 This is because changing the attributes during task execution is very confusing and leads to unpredictable behavior.
 So if you want to set an attribute, make sure there is no task running (C<running()> method can be useful).
 
-=head2 worker (CODE($task, $callback), mandatory)
+=head2 worker (CODE($task, $callback, $queue), mandatory)
 
 C<worker> attribute is a subroutine reference that processes a task. It must not be C<undef>.
 
-C<worker> subroutine reference takes two arguments, C<$task> and C<$callback>.
+C<worker> subroutine reference takes three arguments, C<$task>, C<$callback> and C<$queue>.
 
 C<$task> is the task object the C<worker> is supposed to process.
 
@@ -207,10 +207,12 @@ C<$callback> is a callback subroutine reference that C<worker> must call when th
 C<$callback> can take any list of arguments, which will be passed to the C<$finish_callback> given to the C<push()> method
 (See L</"OBJECT METHODS">).
 
+C<$queue> is the L<Async::Queue> object that holds the worker.
+
 So the C<worker> attribute is something like:
 
     my $q = Async::Queue->new(worker => sub {
-        my ($task, $callback) = @_;
+        my ($task, $callback, $queue) = @_;
         my @results = some_processing($task);
         $callback->(@results);
     });
@@ -218,7 +220,7 @@ So the C<worker> attribute is something like:
 You can do asynchonous processing by deferring the call to C<$callback>:
 
     my $q = Async::Queue->new(worker => sub {
-        my ($task, $callback) = @_;
+        my ($task, $callback, $queue) = @_;
         some_async_processing($task, on_finish => sub {
             my @results = @_;
             $callback->(@results);
@@ -357,7 +359,7 @@ While simultaneous requests dramatically improve efficiency, it may overload the
 and/or the network.
 
 This is where L<Async::Queue> comes in handy. With L<Async::Queue> you can control the concurrency level
-of the HTTP sessions (in this case, three).
+of the HTTP sessions (in this case, up to three).
 
 
 

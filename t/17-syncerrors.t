@@ -116,7 +116,7 @@ BEGIN {
     );
     throws_ok { $q->push("a") } qr/worker dies/, "exception in the worker is not handled.";
     foreach my $event (qw(empty saturated drain)) {
-        $q = Async::Queue->new(worker => sub { pop->() });
+        $q = Async::Queue->new(worker => sub { $_[1]->() });
         $q->$event(sub { die "$event dies" });
         throws_ok { $q->push("a") } qr/$event dies/, "exception in $event handler is not handled.";
     }
