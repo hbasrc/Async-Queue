@@ -91,7 +91,7 @@ sub _shift_run {
     if(@{$self->{task_queue}} == 0 && defined($self->empty)) {
         $self->empty->($self);
     }
-    $self->worker->($task, sub {
+    @_ = ($task, sub {
         my (@worker_results) = @_;
         $cb->(@worker_results) if defined($cb);
         $self->{running} -= 1;
@@ -101,6 +101,7 @@ sub _shift_run {
         @_ = ($self);
         goto &_shift_run;
     }, $self);
+    goto $self->worker();
 }
 
 
