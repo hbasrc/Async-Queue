@@ -121,11 +121,11 @@ Async::Queue - control concurrency of asynchronous tasks
 
 =head1 VERSION
 
-Version 0.02
+Version 0.021
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.021';
 
 
 =head1 SYNOPSIS
