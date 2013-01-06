@@ -91,17 +91,27 @@ sub _shift_run {
     if(@{$self->{task_queue}} == 0 && defined($self->empty)) {
         $self->empty->($self);
     }
-    @_ = ($task, sub {
+    my $sync = 1;
+    my $sync_completed = 0;
+    $self->worker->($task, sub {
         my (@worker_results) = @_;
         $cb->(@worker_results) if defined($cb);
         $self->{running} -= 1;
         if(@{$self->{task_queue}} == 0 && $self->running == 0 && defined($self->drain)) {
             $self->drain->($self);
         }
+        if($sync) {
+            $sync_completed = 1;
+        }else {
+            @_ = ($self);
+            goto &_shift_run;
+        }
+    }, $self);
+    $sync = 0;
+    if($sync_completed) {
         @_ = ($self);
         goto &_shift_run;
-    }, $self);
-    goto $self->worker();
+    }
 }
 
 

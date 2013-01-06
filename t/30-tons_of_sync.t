@@ -27,8 +27,7 @@ my $q = Async::Queue->new(
             cmp_ok(stack_frame_num(), "<", $stack_frame_threshold, "sync worker should not push too many stack frames");
         }
         if(defined($done_callback)) {
-            @_ = ($task);
-            goto $callback;
+            $callback->($task);
         }else {
             $done_callback = sub {
                 $callback->($task);
