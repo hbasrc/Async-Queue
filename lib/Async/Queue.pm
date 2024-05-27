@@ -65,15 +65,21 @@ sub length {
 _define_hook_accessors 'worker';
 _define_hook_accessors $_, allow_undef => 1 foreach qw(drain empty saturated);
 
-sub push {
-    my ($self, $task, $cb) = @_;
-    if(@_ < 2) {
+sub push    { shift->_enqueue(0, @_) }
+sub unshift { shift->_enqueue(1, @_) }
+
+sub _enqueue {
+    my ($self, $is_lifo, $task, $cb) = @_;
+    if(@_ < 3) {
         croak("You must specify something to push.");
     }
     if(defined($cb) && ref($cb) ne 'CODE') {
         croak("callback for a task must be a coderef");
     }
-    push(@{$self->{task_queue}}, [$task, $cb]);
+    $is_lifo ?
+        unshift(@{$self->{task_queue}}, [$task, $cb]) :
+        push(@{$self->{task_queue}}, [$task, $cb]);
+
     $self->_shift_run(1);
     return $self;
 }
