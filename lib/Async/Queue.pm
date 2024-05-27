@@ -77,8 +77,8 @@ sub _enqueue {
         croak("callback for a task must be a coderef");
     }
     $is_lifo ?
-        unshift(@{$self->{task_queue}}, [$task, $cb]) :
-        push(@{$self->{task_queue}}, [$task, $cb]);
+        CORE::unshift(@{$self->{task_queue}}, [$task, $cb]) :
+        CORE::push(@{$self->{task_queue}}, [$task, $cb]);
 
     $self->_shift_run(1);
     return $self;
